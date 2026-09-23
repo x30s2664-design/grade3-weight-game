@@ -140,3 +140,9 @@ h1{font-size:clamp(26px,4vw,40px);margin:3px 0 0}
 .result-card p{font-size:18px;color:var(--muted);margin:0 0 20px}
 .result-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .result-next-level{text-decoration:none}
+
+
+/* 只有達到 3/3 時才顯示跳窗內的下一關按鈕 */
+.result-next-level[hidden]{
+  display:none !important;
+}
