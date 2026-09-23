@@ -125,7 +125,7 @@
     <div class="panel">
       <div class="eyebrow">任務</div>
       <div class="mission" id="mission">拖入剛好 1 公斤的物品</div>
-      <div class="sub">按住物品圖片把它舉起，再拖到秤盤。越重的物品會越慢。</div>
+      <div class="sub">按住物品圖片把它舉起，再拖到秤盤稱重。</div>
 
       <div class="scale-wrap">
         <div class="plate" id="plate" aria-label="秤盤">
@@ -146,14 +146,8 @@
     <div class="items-zone" id="returnZone">
       <div class="items-head">
         <h2>物品區</h2>
-        <div class="sub">100g 最快，600g 最慢；盤子上的物品也能拖回來。</div>
       </div>
       <div class="grid" id="items"></div>
-
-      <div class="formula">
-        拖曳公式：<code>v(w) = max(200, 1160 − 1.6w)</code> px/s<br>
-        每幀移動：<code>step = min(distance, v × Δt)</code>
-      </div>
     </div>
   </section>
 </main>
@@ -201,6 +195,20 @@
   const total = () =>
     placed.reduce((sum, id) => sum + objects.find(o => o.id === id).weight, 0);
 
+  // 手指靠近畫面上下緣時自動捲動，手機／平板可跨畫面把物品拖到秤盤。
+  function autoScrollForPointer(clientY) {
+    const edge = Math.min(120, window.innerHeight * 0.2);
+    const maxScroll = 22;
+
+    if (clientY < edge && window.scrollY > 0) {
+      const strength = Math.min(1, (edge - clientY) / edge);
+      window.scrollBy(0, -Math.max(5, maxScroll * strength));
+    } else if (clientY > window.innerHeight - edge) {
+      const strength = Math.min(1, (clientY - (window.innerHeight - edge)) / edge);
+      window.scrollBy(0, Math.max(5, maxScroll * strength));
+    }
+  }
+
   // 真正限制「每秒最大位移」，不同刷新率的平板也較一致。
   function moveLimited(pic, state, speed, dt) {
     const dx = state.targetX - state.currentX;
@@ -224,14 +232,10 @@
     objects.forEach(obj => {
       const card = document.createElement('div');
       card.className = 'object-card';
-      const speed = Math.round(dragSpeed(obj.weight));
-
       card.innerHTML = `
         <div class="drag-picture" role="button" tabindex="0"
-          aria-label="${obj.name} ${obj.weight}公克，按住後拖到秤盤">${obj.pic}</div>
+          aria-label="${obj.name}，按住後拖到秤盤">${obj.pic}</div>
         <div class="name">${obj.name}</div>
-        <div class="weight">${obj.weight} g</div>
-        <div class="speed">拖曳速度 ${speed} px/s</div>
         <div class="progress-track"><div class="progress"></div></div>
         <div class="status">按住圖片舉起</div>
       `;
@@ -250,7 +254,8 @@
 
     let active = false;
     let lifted = false;
-    let startX = 0, startY = 0, startTime = 0, lastFrame = 0;
+    let startX = 0, startY = 0, startScrollY = 0, startTime = 0, lastFrame = 0;
+    let lastClientX = 0, lastClientY = 0;
     let timer = 0, holdRaf = 0, dragRaf = 0;
     const state = {targetX:0, targetY:0, currentX:0, currentY:0};
 
@@ -272,6 +277,10 @@
       const dt = Math.min(0.05, (now - lastFrame) / 1000);
       lastFrame = now;
 
+      autoScrollForPointer(lastClientY);
+      state.targetX = lastClientX - startX;
+      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
+
       moveLimited(pic, state, speed, dt);
       dragRaf = requestAnimationFrame(dragLoop);
     }
@@ -284,6 +293,9 @@
       lifted = false;
       startX = e.clientX;
       startY = e.clientY;
+      startScrollY = window.scrollY;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
       startTime = performance.now();
       lastFrame = 0;
       state.targetX = state.targetY = state.currentX = state.currentY = 0;
@@ -313,9 +325,12 @@
     });
 
     pic.addEventListener('pointermove', e => {
-      if (!active || !lifted) return;
-      state.targetX = e.clientX - startX;
-      state.targetY = e.clientY - startY;
+      if (!active) return;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      if (!lifted) return;
+      state.targetX = lastClientX - startX;
+      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
     });
 
     pic.addEventListener('pointerup', () => {
@@ -362,7 +377,8 @@
     const speed = dragSpeed(obj.weight);
 
     let active = false;
-    let startX = 0, startY = 0, lastFrame = 0, raf = 0;
+    let startX = 0, startY = 0, startScrollY = 0, lastFrame = 0, raf = 0;
+    let lastClientX = 0, lastClientY = 0;
     const state = {targetX:0, targetY:0, currentX:0, currentY:0};
 
     function loop(now) {
@@ -370,6 +386,10 @@
       if (!lastFrame) lastFrame = now;
       const dt = Math.min(0.05, (now - lastFrame) / 1000);
       lastFrame = now;
+
+      autoScrollForPointer(lastClientY);
+      state.targetX = lastClientX - startX;
+      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
 
       moveLimited(pic, state, speed, dt);
       raf = requestAnimationFrame(loop);
@@ -389,6 +409,9 @@
       active = true;
       startX = e.clientX;
       startY = e.clientY;
+      startScrollY = window.scrollY;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
       lastFrame = 0;
       state.targetX = state.targetY = state.currentX = state.currentY = 0;
 
@@ -401,8 +424,10 @@
 
     pic.addEventListener('pointermove', e => {
       if (!active) return;
-      state.targetX = e.clientX - startX;
-      state.targetY = e.clientY - startY;
+      lastClientX = e.clientX;
+      lastClientY = e.clientY;
+      state.targetX = lastClientX - startX;
+      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
     });
 
     pic.addEventListener('pointerup', () => {
@@ -448,9 +473,7 @@
 
       el.innerHTML = `
         <div class="plate-picture" role="button" tabindex="0"
-          aria-label="${obj.name} ${obj.weight}公克，拖回物品區">${obj.pic}</div>
-        <div class="plate-weight">${obj.weight} g</div>
-        <div class="return-hint">可拖回物品區</div>
+          aria-label="${obj.name}，拖回物品區">${obj.pic}</div>
       `;
 
       setupReturnDrag(el, obj, index);
@@ -480,7 +503,7 @@
     placed = [];
     mission.textContent = `拖入剛好 ${rounds[round].label} 的物品`;
     message.textContent =
-      '按住圖片，舉起後拖到盤子。放錯了就拖回物品區。';
+      '按住圖片，舉起後拖到盤子稱重。放錯了就拖回物品區。';
     renderPlate();
   }
 
