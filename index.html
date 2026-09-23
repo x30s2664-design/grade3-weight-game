@@ -1,517 +1,88 @@
 <!doctype html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#f6f7fb" />
-  <title>三年級重量遊戲｜第一段</title>
-  <style>
-    :root{
-      --bg:#f6f7fb;
-      --panel:#ffffff;
-      --card:#fbfbfd;
-      --text:#1f2937;
-      --muted:#6b7280;
-      --border:#d9dee8;
-      --accent:#4f46e5;
-      --accent-soft:#eef2ff;
-      --ok:#15803d;
-      --warn:#b45309;
-      --danger:#b91c1c;
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--text);font-family:
-      system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif}
-    button{font:inherit}
-    .app{max-width:1100px;margin:0 auto;padding:20px}
-    .header{display:flex;gap:16px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-    .eyebrow{font-size:14px;color:var(--muted)}
-    h1{font-size:clamp(24px,4vw,38px);margin:4px 0 0}
-    .btn{
-      min-height:48px;padding:0 18px;border:0;border-radius:14px;
-      background:var(--accent);color:white;font-weight:700;cursor:pointer
-    }
-    .layout{display:grid;grid-template-columns:1.06fr .94fr;gap:18px;align-items:start}
-    .panel{background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:18px}
-    .mission{font-size:clamp(20px,3vw,30px);font-weight:800;margin:4px 0 8px}
-    .sub{color:var(--muted);font-size:14px}
-    .scale-wrap{max-width:520px;margin:24px auto 0}
-    .plate{
-      position:relative;min-height:250px;border:4px dashed var(--border);
-      border-radius:50%;background:var(--card);padding:34px 20px 24px;overflow:visible
-    }
-    .plate:before{
-      content:"";position:absolute;left:8%;right:8%;top:24px;height:28px;
-      border:1px solid var(--border);border-radius:50%;opacity:.55
-    }
-    .plate-items{
-      position:relative;z-index:2;min-height:175px;display:flex;align-items:end;
-      justify-content:center;gap:14px;flex-wrap:wrap
-    }
-    .scale-neck{height:20px;width:120px;margin:0 auto;background:#c7cbd4}
-    .scale-readout{
-      width:180px;min-height:86px;margin:0 auto;border:1px solid var(--border);
-      border-radius:16px;background:var(--card);display:flex;flex-direction:column;
-      align-items:center;justify-content:center
-    }
-    .scale-readout strong{font-size:30px}
-    .message{
-      min-height:52px;margin-top:16px;display:flex;align-items:center;justify-content:center;
-      text-align:center;font-weight:750;font-size:17px
-    }
-    .items-zone{border:3px solid transparent;border-radius:24px;padding:4px;transition:border-color .15s}
-    .items-head{margin:0 0 12px}
-    .items-head h2{font-size:20px;margin:0 0 4px}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    .object-card{
-      background:var(--card);border:1px solid var(--border);border-radius:20px;
-      text-align:center;padding:12px;min-width:0
-    }
-    .drag-picture,.plate-picture{
-      width:108px;height:108px;max-width:100%;margin:0 auto;
-      display:flex;align-items:center;justify-content:center;
-      font-size:72px;line-height:1;border-radius:22px;
-      user-select:none;-webkit-user-select:none;touch-action:none;
-      cursor:grab;position:relative;z-index:5;will-change:transform
-    }
-    .drag-picture.holding{outline:3px solid #a5b4fc}
-    .drag-picture.lifted,.plate-picture.dragging{
-      outline:4px solid var(--accent);cursor:grabbing;z-index:100;
-      background:rgba(255,255,255,.72)
-    }
-    .name{font-weight:800;margin-top:6px}
-    .weight{font-size:14px;color:var(--muted);margin-top:2px}
-    .speed{font-size:12px;color:var(--muted);margin-top:3px}
-    .progress-track{height:9px;background:#e5e7eb;border-radius:999px;overflow:hidden;margin-top:10px}
-    .progress{height:100%;width:0;background:var(--accent);border-radius:999px}
-    .status{font-size:12px;color:var(--muted);min-height:20px;margin-top:5px}
-    .plate-item{text-align:center;position:relative;min-width:110px}
-    .plate-item .plate-picture{font-size:64px}
-    .plate-weight{font-size:13px;font-weight:800;margin-top:2px}
-    .return-hint{font-size:11px;color:var(--muted);margin-top:2px}
-    .formula{
-      margin-top:16px;background:var(--accent-soft);border-radius:16px;padding:12px 14px;
-      font-size:13px;color:#3730a3;line-height:1.6
-    }
-    .formula code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:700}
-    @media (max-width:800px){
-      .app{padding:12px}
-      .layout{grid-template-columns:1fr}
-      .panel{padding:14px}
-      .plate{min-height:220px}
-      .plate-items{min-height:150px}
-      .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-      .drag-picture,.plate-picture{width:96px;height:96px;font-size:64px}
-    }
-    @media (max-width:620px){
-      .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    }
-    @media (prefers-reduced-motion:reduce){
-      *{scroll-behavior:auto!important;animation:none!important}
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>三年級重量遊戲</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+.home{max-width:980px;margin:0 auto;padding:22px}
+.hero{margin-bottom:20px}
+.hero h1{font-size:clamp(30px,5vw,48px);margin:6px 0}
+.hero p{color:var(--muted);margin:0}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:24px;padding:20px;min-width:0}
+.card .icon{font-size:58px}
+.card h2{margin:8px 0 4px}
+.card p{color:var(--muted);min-height:48px}
+.card .progress{height:auto;width:auto;background:none;font-weight:800;color:var(--text);margin:10px 0}
+.play{
+  min-height:48px;border-radius:14px;padding:0 16px;display:flex;align-items:center;justify-content:center;
+  text-decoration:none;font-weight:800;background:var(--accent);color:#fff
+}
+.play.locked{background:#e5e7eb;color:#6b7280;pointer-events:none}
+.lockline{font-size:13px;color:var(--muted);margin-top:8px}
+.reset{margin-top:18px;border:1px solid var(--border);background:var(--panel);border-radius:12px;padding:10px 14px}
+@media(max-width:760px){.cards{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-<main class="app">
-  <header class="header">
-    <div>
-      <div class="eyebrow">三年級數學・重量｜第一段</div>
-      <h1>重量拖拖樂</h1>
-    </div>
-    <button class="btn" id="newRound" type="button">換一題</button>
-  </header>
-
-  <section class="layout">
-    <div class="panel">
-      <div class="eyebrow">任務</div>
-      <div class="mission" id="mission">拖入剛好 1 公斤的物品</div>
-      <div class="sub">按住物品圖片把它舉起，再拖到秤盤稱重。</div>
-
-      <div class="scale-wrap">
-        <div class="plate" id="plate" aria-label="秤盤">
-          <div class="plate-items" id="plateItems"></div>
-        </div>
-        <div class="scale-neck"></div>
-        <div class="scale-readout">
-          <span class="sub">目前重量</span>
-          <strong><span id="totalWeight">0</span> g</strong>
-        </div>
-      </div>
-
-      <div class="message" id="message" aria-live="polite">
-        按住圖片，舉起後拖到盤子。放錯了就拖回物品區。
-      </div>
-    </div>
-
-    <div class="items-zone" id="returnZone">
-      <div class="items-head">
-        <h2>物品區</h2>
-      </div>
-      <div class="grid" id="items"></div>
-    </div>
+<main class="home">
+  <section class="hero">
+    <div class="eyebrow">三年級數學・重量</div>
+    <h1>重量拖拖樂</h1>
+    <p>每一關成功 3 次，才會解鎖下一個重量世界。</p>
   </section>
+
+  <section class="cards">
+    <article class="card">
+      <div class="icon">🍎</div>
+      <h2>第一關：公克 g</h2>
+      <p>小物品直接拖曳，先感受重量，再放到秤盤。</p>
+      <div class="progress" id="gramsProgress">0 / 3 次</div>
+      <a class="play" href="games/grams.html">開始遊戲</a>
+    </article>
+
+    <article class="card">
+      <div class="icon">🎒</div>
+      <h2>第二關：公斤 kg</h2>
+      <p>更重的生活物品，拖曳速度會更慢。</p>
+      <div class="progress" id="kgProgress">0 / 3 次</div>
+      <a class="play locked" id="kgLink" href="games/kilograms.html">尚未解鎖</a>
+      <div class="lockline" id="kgLock">第一關成功 3 次後解鎖</div>
+    </article>
+
+    <article class="card">
+      <div class="icon">🚜</div>
+      <h2>第三關：噸 t</h2>
+      <p>操作鏟車搬運噸級物品到大型地磅。</p>
+      <div class="progress" id="tonsProgress">0 / 3 次</div>
+      <a class="play locked" id="tonsLink" href="games/tons.html">尚未解鎖</a>
+      <div class="lockline" id="tonsLock">第二關成功 3 次後解鎖</div>
+    </article>
+  </section>
+
+  <button class="reset" id="resetBtn" type="button">重設遊戲進度</button>
 </main>
 
+<script src="shared.js"></script>
 <script>
-(() => {
-  const objects = [
-    {id:'apple', pic:'🍎', name:'蘋果', weight:100},
-    {id:'milk',  pic:'🥛', name:'牛奶', weight:200},
-    {id:'book',  pic:'📘', name:'課本', weight:300},
-    {id:'ball',  pic:'⚽', name:'足球', weight:400},
-    {id:'rice',  pic:'🍚', name:'米袋', weight:500},
-    {id:'box',   pic:'📦', name:'箱子', weight:600}
-  ];
+const p=GameCore.loadProgress();
+gramsProgress.textContent=`${p.gramsWins} / 3 次`;
+kgProgress.textContent=`${p.kilogramsWins} / 3 次`;
+tonsProgress.textContent=`${p.tonsWins} / 3 次`;
 
-  const rounds = [
-    {target:1000, label:'1 公斤'},
-    {target:800,  label:'800 公克'},
-    {target:700,  label:'700 公克'},
-    {target:500,  label:'500 公克'}
-  ];
-
-  const liftTime = {
-    100:350, 200:500, 300:700,
-    400:900, 500:1150, 600:1400
-  };
-
-  // 重量 w（公克）→ 最大拖曳速度 px/s
-  function dragSpeed(weight) {
-    return Math.max(200, 1160 - 1.6 * weight);
+if(GameCore.isUnlocked('kilograms')){
+  kgLink.classList.remove('locked'); kgLink.textContent='開始遊戲'; kgLock.textContent='已解鎖';
+}
+if(GameCore.isUnlocked('tons')){
+  tonsLink.classList.remove('locked'); tonsLink.textContent='開始遊戲'; tonsLock.textContent='已解鎖';
+}
+resetBtn.addEventListener('click',()=>{
+  if(confirm('要把三個關卡的進度全部歸零嗎？')){
+    GameCore.resetAll(); location.reload();
   }
-
-  const itemsEl = document.querySelector('#items');
-  const plate = document.querySelector('#plate');
-  const plateItems = document.querySelector('#plateItems');
-  const totalWeight = document.querySelector('#totalWeight');
-  const mission = document.querySelector('#mission');
-  const message = document.querySelector('#message');
-  const newRound = document.querySelector('#newRound');
-  const returnZone = document.querySelector('#returnZone');
-
-  let placed = [];
-  let round = 0;
-
-  const total = () =>
-    placed.reduce((sum, id) => sum + objects.find(o => o.id === id).weight, 0);
-
-  // 手指靠近畫面上下緣時自動捲動，手機／平板可跨畫面把物品拖到秤盤。
-  function autoScrollForPointer(clientY) {
-    const edge = Math.min(120, window.innerHeight * 0.2);
-    const maxScroll = 22;
-
-    if (clientY < edge && window.scrollY > 0) {
-      const strength = Math.min(1, (edge - clientY) / edge);
-      window.scrollBy(0, -Math.max(5, maxScroll * strength));
-    } else if (clientY > window.innerHeight - edge) {
-      const strength = Math.min(1, (clientY - (window.innerHeight - edge)) / edge);
-      window.scrollBy(0, Math.max(5, maxScroll * strength));
-    }
-  }
-
-  // 真正限制「每秒最大位移」，不同刷新率的平板也較一致。
-  function moveLimited(pic, state, speed, dt) {
-    const dx = state.targetX - state.currentX;
-    const dy = state.targetY - state.currentY;
-    const distance = Math.hypot(dx, dy);
-
-    if (distance > 0.3) {
-      const maxStep = speed * dt;
-      const step = Math.min(distance, maxStep);
-      state.currentX += (dx / distance) * step;
-      state.currentY += (dy / distance) * step;
-    }
-
-    pic.style.transform =
-      `translate(${state.currentX}px, ${state.currentY}px) scale(1.08)`;
-  }
-
-  function renderObjects() {
-    itemsEl.innerHTML = '';
-
-    objects.forEach(obj => {
-      const card = document.createElement('div');
-      card.className = 'object-card';
-      card.innerHTML = `
-        <div class="drag-picture" role="button" tabindex="0"
-          aria-label="${obj.name}，按住後拖到秤盤">${obj.pic}</div>
-        <div class="name">${obj.name}</div>
-        <div class="progress-track"><div class="progress"></div></div>
-        <div class="status">按住圖片舉起</div>
-      `;
-
-      setupSourceDrag(card, obj);
-      itemsEl.appendChild(card);
-    });
-  }
-
-  function setupSourceDrag(card, obj) {
-    const pic = card.querySelector('.drag-picture');
-    const progress = card.querySelector('.progress');
-    const status = card.querySelector('.status');
-    const speed = dragSpeed(obj.weight);
-    const needed = liftTime[obj.weight];
-
-    let active = false;
-    let lifted = false;
-    let startX = 0, startY = 0, startScrollY = 0, startTime = 0, lastFrame = 0;
-    let lastClientX = 0, lastClientY = 0;
-    let timer = 0, holdRaf = 0, dragRaf = 0;
-    const state = {targetX:0, targetY:0, currentX:0, currentY:0};
-
-    function reset() {
-      active = false;
-      lifted = false;
-      clearTimeout(timer);
-      cancelAnimationFrame(holdRaf);
-      cancelAnimationFrame(dragRaf);
-      pic.classList.remove('holding', 'lifted');
-      pic.style.transform = '';
-      progress.style.width = '0%';
-      status.textContent = '按住圖片舉起';
-    }
-
-    function dragLoop(now) {
-      if (!active || !lifted) return;
-      if (!lastFrame) lastFrame = now;
-      const dt = Math.min(0.05, (now - lastFrame) / 1000);
-      lastFrame = now;
-
-      autoScrollForPointer(lastClientY);
-      state.targetX = lastClientX - startX;
-      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
-
-      moveLimited(pic, state, speed, dt);
-      dragRaf = requestAnimationFrame(dragLoop);
-    }
-
-    pic.addEventListener('pointerdown', e => {
-      e.preventDefault();
-      if (active) return;
-
-      active = true;
-      lifted = false;
-      startX = e.clientX;
-      startY = e.clientY;
-      startScrollY = window.scrollY;
-      lastClientX = e.clientX;
-      lastClientY = e.clientY;
-      startTime = performance.now();
-      lastFrame = 0;
-      state.targetX = state.targetY = state.currentX = state.currentY = 0;
-
-      pic.setPointerCapture(e.pointerId);
-      pic.classList.add('holding');
-      message.textContent = `正在舉起${obj.name}……`;
-
-      const tick = now => {
-        if (!active || lifted) return;
-        const p = Math.min(1, (now - startTime) / needed);
-        progress.style.width = `${p * 100}%`;
-        status.textContent = `舉起中 ${Math.round(p * 100)}%`;
-        if (p < 1) holdRaf = requestAnimationFrame(tick);
-      };
-      holdRaf = requestAnimationFrame(tick);
-
-      timer = setTimeout(() => {
-        if (!active) return;
-        lifted = true;
-        pic.classList.remove('holding');
-        pic.classList.add('lifted');
-        progress.style.width = '100%';
-        status.textContent = '拖到盤子';
-        dragRaf = requestAnimationFrame(dragLoop);
-      }, needed);
-    });
-
-    pic.addEventListener('pointermove', e => {
-      if (!active) return;
-      lastClientX = e.clientX;
-      lastClientY = e.clientY;
-      if (!lifted) return;
-      state.targetX = lastClientX - startX;
-      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
-    });
-
-    pic.addEventListener('pointerup', () => {
-      if (!active) return;
-
-      if (!lifted) {
-        message.textContent = `還沒舉起${obj.name}，再按久一點。`;
-        reset();
-        return;
-      }
-
-      const a = pic.getBoundingClientRect();
-      const b = plate.getBoundingClientRect();
-      const cx = a.left + a.width / 2;
-      const cy = a.top + a.height / 2;
-      const hit =
-        cx >= b.left && cx <= b.right &&
-        cy >= b.top  && cy <= b.bottom;
-
-      if (hit) {
-        placed.push(obj.id);
-        renderPlate();
-      } else {
-        message.textContent = `${obj.name}還沒真正移到盤子。`;
-      }
-
-      reset();
-    });
-
-    pic.addEventListener('pointercancel', reset);
-
-    // 鍵盤替代操作，避免主要操作只能靠拖曳。
-    pic.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        placed.push(obj.id);
-        renderPlate();
-      }
-    });
-  }
-
-  function setupReturnDrag(el, obj, index) {
-    const pic = el.querySelector('.plate-picture');
-    const speed = dragSpeed(obj.weight);
-
-    let active = false;
-    let startX = 0, startY = 0, startScrollY = 0, lastFrame = 0, raf = 0;
-    let lastClientX = 0, lastClientY = 0;
-    const state = {targetX:0, targetY:0, currentX:0, currentY:0};
-
-    function loop(now) {
-      if (!active) return;
-      if (!lastFrame) lastFrame = now;
-      const dt = Math.min(0.05, (now - lastFrame) / 1000);
-      lastFrame = now;
-
-      autoScrollForPointer(lastClientY);
-      state.targetX = lastClientX - startX;
-      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
-
-      moveLimited(pic, state, speed, dt);
-      raf = requestAnimationFrame(loop);
-    }
-
-    function reset() {
-      active = false;
-      cancelAnimationFrame(raf);
-      pic.classList.remove('dragging');
-      pic.style.transform = '';
-      returnZone.style.borderColor = 'transparent';
-    }
-
-    pic.addEventListener('pointerdown', e => {
-      e.preventDefault();
-
-      active = true;
-      startX = e.clientX;
-      startY = e.clientY;
-      startScrollY = window.scrollY;
-      lastClientX = e.clientX;
-      lastClientY = e.clientY;
-      lastFrame = 0;
-      state.targetX = state.targetY = state.currentX = state.currentY = 0;
-
-      pic.setPointerCapture(e.pointerId);
-      pic.classList.add('dragging');
-      returnZone.style.borderColor = 'var(--accent)';
-      message.textContent = `把${obj.name}拖回物品區。`;
-      raf = requestAnimationFrame(loop);
-    });
-
-    pic.addEventListener('pointermove', e => {
-      if (!active) return;
-      lastClientX = e.clientX;
-      lastClientY = e.clientY;
-      state.targetX = lastClientX - startX;
-      state.targetY = lastClientY - startY + (window.scrollY - startScrollY);
-    });
-
-    pic.addEventListener('pointerup', () => {
-      if (!active) return;
-
-      const a = pic.getBoundingClientRect();
-      const b = returnZone.getBoundingClientRect();
-      const cx = a.left + a.width / 2;
-      const cy = a.top + a.height / 2;
-      const hit =
-        cx >= b.left && cx <= b.right &&
-        cy >= b.top  && cy <= b.bottom;
-
-      if (hit) {
-        placed.splice(index, 1);
-        renderPlate();
-        message.textContent = `${obj.name}已放回物品區。`;
-      } else {
-        message.textContent = `${obj.name}還在盤子上。`;
-      }
-
-      reset();
-    });
-
-    pic.addEventListener('pointercancel', reset);
-
-    pic.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        placed.splice(index, 1);
-        renderPlate();
-      }
-    });
-  }
-
-  function renderPlate() {
-    plateItems.innerHTML = '';
-
-    placed.forEach((id, index) => {
-      const obj = objects.find(o => o.id === id);
-      const el = document.createElement('div');
-      el.className = 'plate-item';
-
-      el.innerHTML = `
-        <div class="plate-picture" role="button" tabindex="0"
-          aria-label="${obj.name}，拖回物品區">${obj.pic}</div>
-      `;
-
-      setupReturnDrag(el, obj, index);
-      plateItems.appendChild(el);
-    });
-
-    const value = total();
-    const target = rounds[round].target;
-    totalWeight.textContent = value;
-
-    if (value === target) {
-      plate.style.borderColor = 'var(--ok)';
-      message.textContent = `答對了！剛好 ${rounds[round].label} 🎉`;
-    } else if (value > target) {
-      plate.style.borderColor = 'var(--danger)';
-      message.textContent =
-        `太重了，多了 ${value - target} 公克。把物品拖回去修正。`;
-    } else {
-      plate.style.borderColor = 'var(--border)';
-      message.textContent =
-        `目前 ${value} 公克，還差 ${target - value} 公克。`;
-    }
-  }
-
-  function startRound(next = false) {
-    if (next) round = (round + 1) % rounds.length;
-    placed = [];
-    mission.textContent = `拖入剛好 ${rounds[round].label} 的物品`;
-    message.textContent =
-      '按住圖片，舉起後拖到盤子稱重。放錯了就拖回物品區。';
-    renderPlate();
-  }
-
-  newRound.addEventListener('click', () => startRound(true));
-
-  renderObjects();
-  startRound(false);
-})();
+});
 </script>
 </body>
 </html>
