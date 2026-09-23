@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>第二關：公斤重量挑戰</title>
+<link rel="stylesheet" href="../shared.css">
+</head>
+<body>
+<main class="app" id="gameArea">
+  
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">三年級數學・重量</div>
+      <h1>第二關：公斤重量挑戰</h1>
+    </div>
+    <div class="actions">
+      <a class="back" href="../index.html">返回首頁</a>
+      <button class="btn" id="newRound" type="button">換一題</button>
+    </div>
+  </header>
+
+  <section class="layout">
+    <div class="panel">
+      <div class="mission-label">任務</div>
+      <div class="mission" id="mission"></div>
+      <div class="hint">先感受物品有多難搬，再放到秤盤確認重量。</div>
+      <div class="progress-badge" id="progressBadge">本關進度 0 / 3</div>
+      
+
+      <div class="scale-wrap">
+        <div class="plate" id="targetArea" aria-label="秤盤">
+          <div class="plate-items" id="targetItems"></div>
+        </div>
+        <div class="scale-neck"></div>
+        <div class="scale-readout">
+          <span>目前重量</span>
+          <strong><span class="total-number" id="totalWeight">0</span> kg</strong>
+        </div>
+      </div>
+
+      <div class="message" id="message" aria-live="polite"></div>
+    </div>
+
+    <div class="items-zone" id="returnZone">
+      <h2>物品區</h2>
+      <div class="grid" id="items"></div>
+    </div>
+  </section>
+</main>
+
+<script src="../shared.js"></script>
+<script>
+
+if(!GameCore.isUnlocked('kilograms')){
+  location.href='../index.html';
+}
+
+const GAME='kilograms', UNIT='kg', FORKLIFT_POWER=1;
+const objects=[{"id": "bottle", "pic": "🧴", "name": "大水壺", "weight": 1, "grams": 1000}, {"id": "backpack", "pic": "🎒", "name": "書包", "weight": 2, "grams": 2000}, {"id": "melon", "pic": "🍉", "name": "西瓜", "weight": 5, "grams": 5000}, {"id": "rice", "pic": "🍚", "name": "米袋", "weight": 10, "grams": 10000}, {"id": "suitcase", "pic": "🧳", "name": "行李箱", "weight": 20, "grams": 20000}, {"id": "box", "pic": "📦", "name": "大紙箱", "weight": 30, "grams": 30000}];
+const rounds=[{"target": 10, "label": "10 公斤"}, {"target": 25, "label": "25 公斤"}, {"target": 33, "label": "33 公斤"}, {"target": 50, "label": "50 公斤"}];
+
+const root=document.querySelector('#gameArea');
+const itemsEl=document.querySelector('#items');
+const targetArea=document.querySelector('#targetArea');
+const targetItems=document.querySelector('#targetItems');
+const totalWeight=document.querySelector('#totalWeight');
+const mission=document.querySelector('#mission');
+const message=document.querySelector('#message');
+const newRound=document.querySelector('#newRound');
+const returnZone=document.querySelector('#returnZone');
+const progressBadge=document.querySelector('#progressBadge');
+let placed=[], round=0, countedThisRound=false;
+
+function progressCount(){ return GameCore.loadProgress()[GAME+'Wins']; }
+function updateProgressBadge(){ progressBadge.textContent=`本關進度 ${progressCount()} / 3`; }
+function total(){ return placed.reduce((s,id)=>s+objects.find(o=>o.id===id).weight,0); }
+function isPlaced(id){ return placed.includes(id); }
+function gramsFor(obj){ return obj.grams; }
+function speedFor(obj){ return GameCore.dragSpeedFromGrams(gramsFor(obj))*FORKLIFT_POWER; }
+function liftFor(obj){ return GameCore.liftTimeFromGrams(gramsFor(obj)); }
+
+
+
+function renderObjects(){
+  itemsEl.innerHTML='';
+  objects.forEach(obj=>{
+    const card=document.createElement('div');
+    card.className='object-card'+(isPlaced(obj.id)?' used':'');
+    card.innerHTML=`
+      <div class="drag-picture" role="button" tabindex="0" aria-disabled="${isPlaced(obj.id)}"
+        aria-label="${obj.name}，拖到秤盤">${obj.pic}</div>
+      <div class="name">${obj.name}</div>
+      <div class="progress-track"><div class="progress"></div></div>
+      <div class="status">${isPlaced(obj.id)?'已在秤盤':'按住圖片舉起'}</div>`;
+    setupSourceDrag(card,obj);
+    itemsEl.appendChild(card);
+  });
+}
+
+function setupSourceDrag(card,obj){
+  const pic=card.querySelector('.drag-picture');
+  const progress=card.querySelector('.progress');
+  const status=card.querySelector('.status');
+  const speed=speedFor(obj), needed=liftFor(obj);
+  let active=false,lifted=false,startX=0,startY=0,startScrollY=0,startTime=0,lastFrame=0;
+  let lastClientX=0,lastClientY=0,timer=0,holdRaf=0,dragRaf=0;
+  const state={targetX:0,targetY:0,currentX:0,currentY:0};
+
+  function reset(){
+    active=false;lifted=false;clearTimeout(timer);cancelAnimationFrame(holdRaf);cancelAnimationFrame(dragRaf);
+    pic.classList.remove('holding','lifted');pic.style.transform='';progress.style.width='0%';
+    status.textContent=isPlaced(obj.id)?'已在秤盤':'按住圖片舉起';
+  }
+  function loop(now){
+    if(!active||!lifted)return;
+    if(!lastFrame)lastFrame=now;
+    const dt=Math.min(.05,(now-lastFrame)/1000);lastFrame=now;
+    GameCore.autoScrollForPointer(lastClientY);
+    state.targetX=lastClientX-startX;
+    state.targetY=lastClientY-startY+(window.scrollY-startScrollY);
+    GameCore.moveLimited(pic,state,speed,dt);
+    dragRaf=requestAnimationFrame(loop);
+  }
+
+  pic.addEventListener('pointerdown',e=>{
+    e.preventDefault();if(active||isPlaced(obj.id))return;
+    active=true;startX=e.clientX;startY=e.clientY;startScrollY=window.scrollY;
+    lastClientX=e.clientX;lastClientY=e.clientY;startTime=performance.now();lastFrame=0;
+    state.targetX=state.targetY=state.currentX=state.currentY=0;
+    pic.setPointerCapture(e.pointerId);pic.classList.add('holding');
+    message.textContent='正在舉起'+obj.name+'……';
+    const tick=now=>{
+      if(!active||lifted)return;
+      const p=Math.min(1,(now-startTime)/needed);
+      progress.style.width=(p*100)+'%';status.textContent='舉起中 '+Math.round(p*100)+'%';
+      if(p<1)holdRaf=requestAnimationFrame(tick);
+    };
+    holdRaf=requestAnimationFrame(tick);
+    timer=setTimeout(()=>{
+      if(!active)return;
+      lifted=true;pic.classList.remove('holding');pic.classList.add('lifted');
+      progress.style.width='100%';status.textContent='拖到秤盤';
+      dragRaf=requestAnimationFrame(loop);
+    },needed);
+  });
+
+  pic.addEventListener('pointermove',e=>{
+    if(!active)return;lastClientX=e.clientX;lastClientY=e.clientY;
+    if(!lifted)return;
+    state.targetX=lastClientX-startX;
+    state.targetY=lastClientY-startY+(window.scrollY-startScrollY);
+  });
+
+  pic.addEventListener('pointerup',()=>{
+    if(!active)return;
+    if(!lifted){message.textContent=obj.name+'還沒舉起來，再按久一點。';reset();return;}
+    const a=pic.getBoundingClientRect(),b=targetArea.getBoundingClientRect();
+    const cx=a.left+a.width/2,cy=a.top+a.height/2;
+    const hit=cx>=b.left&&cx<=b.right&&cy>=b.top&&cy<=b.bottom;
+    if(hit&&!isPlaced(obj.id)){placed.push(obj.id);renderObjects();renderTarget();}
+    else message.textContent=obj.name+'還沒移到秤盤。';
+    reset();
+  });
+  pic.addEventListener('pointercancel',reset);
+  pic.addEventListener('keydown',e=>{
+    if((e.key==='Enter'||e.key===' ')&&!isPlaced(obj.id)){
+      e.preventDefault();placed.push(obj.id);renderObjects();renderTarget();
+    }
+  });
+}
+
+function setupReturnDrag(el,obj,index){
+  const pic=el.querySelector('.plate-picture');
+  const speed=speedFor(obj);
+  let active=false,startX=0,startY=0,startScrollY=0,lastFrame=0,raf=0,lastClientX=0,lastClientY=0;
+  const state={targetX:0,targetY:0,currentX:0,currentY:0};
+  function reset(){
+    active=false;cancelAnimationFrame(raf);pic.classList.remove('dragging');pic.style.transform='';
+    returnZone.style.borderColor='transparent';
+  }
+  function loop(now){
+    if(!active)return;if(!lastFrame)lastFrame=now;
+    const dt=Math.min(.05,(now-lastFrame)/1000);lastFrame=now;
+    GameCore.autoScrollForPointer(lastClientY);
+    state.targetX=lastClientX-startX;
+    state.targetY=lastClientY-startY+(window.scrollY-startScrollY);
+    GameCore.moveLimited(pic,state,speed,dt);
+    raf=requestAnimationFrame(loop);
+  }
+  pic.addEventListener('pointerdown',e=>{
+    e.preventDefault();active=true;startX=e.clientX;startY=e.clientY;startScrollY=window.scrollY;
+    lastClientX=e.clientX;lastClientY=e.clientY;lastFrame=0;
+    state.targetX=state.targetY=state.currentX=state.currentY=0;
+    pic.setPointerCapture(e.pointerId);pic.classList.add('dragging');
+    returnZone.style.borderColor='var(--accent)';
+    raf=requestAnimationFrame(loop);
+  });
+  pic.addEventListener('pointermove',e=>{
+    if(!active)return;lastClientX=e.clientX;lastClientY=e.clientY;
+    state.targetX=lastClientX-startX;state.targetY=lastClientY-startY+(window.scrollY-startScrollY);
+  });
+  pic.addEventListener('pointerup',()=>{
+    if(!active)return;
+    const a=pic.getBoundingClientRect(),b=returnZone.getBoundingClientRect();
+    const cx=a.left+a.width/2,cy=a.top+a.height/2;
+    if(cx>=b.left&&cx<=b.right&&cy>=b.top&&cy<=b.bottom){
+      placed.splice(index,1);renderObjects();renderTarget();message.textContent=obj.name+'已放回物品區。';
+    }else message.textContent=obj.name+'還在秤盤上。';
+    reset();
+  });
+  pic.addEventListener('pointercancel',reset);
+}
+
+function renderTarget(){
+  targetItems.innerHTML='';
+  placed.forEach((id,index)=>{
+    const obj=objects.find(o=>o.id===id);
+    const el=document.createElement('div');el.className='plate-item';
+    el.innerHTML=`<div class="plate-picture" role="button" tabindex="0" aria-label="${obj.name}，拖回物品區">${obj.pic}</div>`;
+    setupReturnDrag(el,obj,index);targetItems.appendChild(el);
+  });
+
+  const value=total(), target=rounds[round].target;
+  totalWeight.textContent=Number.isInteger(value)?value:value.toFixed(1);
+
+  if(value===target){
+    targetArea.style.borderColor='var(--ok)';
+    if(!countedThisRound){
+      countedThisRound=true;
+      const wins=GameCore.addWin(GAME);
+      updateProgressBadge();
+      message.textContent=`答對了！本關已成功 ${wins} / 3 次 🎉`;
+      if(wins>=3){
+        message.textContent += GAME==='grams'?' 下一關「公斤」已解鎖！':GAME==='kilograms'?' 下一關「噸」已解鎖！':' 本關完成！';
+      }
+    }else{
+      message.textContent=`答對了！剛好 ${rounds[round].label} 🎉`;
+    }
+  }else if(value>target){
+    targetArea.style.borderColor='var(--danger)';
+    message.textContent=`太重了，多了 ${(value-target).toFixed(1).replace('.0','')} kg。`;
+  }else{
+    targetArea.style.borderColor='var(--border)';
+    message.textContent=`目前 ${Number.isInteger(value)?value:value.toFixed(1)} kg，還差 ${(target-value).toFixed(1).replace('.0','')} kg。`;
+  }
+}
+
+function startRound(next=false){
+  if(next)round=(round+1)%rounds.length;
+  placed=[];countedThisRound=false;
+  mission.textContent=`拖入剛好 ${rounds[round].label} 的物品`;
+  message.textContent='按住圖片舉起，再拖到秤盤稱重。';
+  renderObjects();renderTarget();updateProgressBadge();
+}
+newRound.addEventListener('click',()=>startRound(true));
+startRound(false);
+</script>
+
+</body>
+</html>
