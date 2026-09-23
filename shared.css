@@ -125,3 +125,18 @@ h1{font-size:clamp(26px,4vw,40px);margin:3px 0 0}
   pointer-events:auto;
   cursor:not-allowed;
 }
+
+.result-modal[hidden]{display:none}
+.result-modal{
+  position:fixed;inset:0;z-index:10000;background:rgba(15,23,42,.48);
+  display:flex;align-items:center;justify-content:center;padding:20px
+}
+.result-card{
+  width:min(420px,100%);background:#fff;border-radius:24px;padding:28px;
+  text-align:center;box-shadow:0 24px 70px rgba(15,23,42,.24)
+}
+.result-icon{font-size:58px;line-height:1}
+.result-card h2{font-size:30px;margin:10px 0 6px}
+.result-card p{font-size:18px;color:var(--muted);margin:0 0 20px}
+.result-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.result-next-level{text-decoration:none}

@@ -48,6 +48,19 @@
       <div class="grid" id="items"></div>
     </div>
   </section>
+
+  <div class="result-modal" id="resultModal" hidden>
+    <div class="result-card" role="dialog" aria-modal="true" aria-labelledby="resultTitle">
+      <div class="result-icon">🎉</div>
+      <h2 id="resultTitle">答對了！</h2>
+      <p id="resultText"></p>
+      <div class="result-actions">
+        <button class="btn" id="modalNextQuestion" type="button">下一題</button>
+        <a class="btn result-next-level" id="modalNextLevel" href="kilograms.html" hidden>下一關：公斤</a>
+      </div>
+    </div>
+  </div>
+
 </main>
 
 <script src="shared.js"></script>
@@ -55,7 +68,7 @@
 
 const GAME='grams', UNIT='g', FORKLIFT_POWER=1;
 const objects=[{"id": "apple", "pic": "🍎", "name": "蘋果", "weight": 100, "grams": 100}, {"id": "milk", "pic": "🥛", "name": "牛奶", "weight": 200, "grams": 200}, {"id": "book", "pic": "📘", "name": "課本", "weight": 300, "grams": 300}, {"id": "ball", "pic": "⚽", "name": "足球", "weight": 400, "grams": 400}, {"id": "rice", "pic": "🍚", "name": "米袋", "weight": 500, "grams": 500}, {"id": "box", "pic": "📦", "name": "箱子", "weight": 600, "grams": 600}];
-const rounds=[{"target": 500, "label": "500 公克"}, {"target": 700, "label": "700 公克"}, {"target": 900, "label": "900 公克"}, {"target": 1000, "label": "1000 公克"}];
+const rounds=[{"target":300,"label":"300 公克"},{"target":400,"label":"400 公克"},{"target":500,"label":"500 公克"},{"target":600,"label":"600 公克"},{"target":700,"label":"700 公克"},{"target":800,"label":"800 公克"},{"target":900,"label":"900 公克"},{"target":1000,"label":"1000 公克"}];
 
 const root=document.querySelector('#gameArea');
 const itemsEl=document.querySelector('#items');
@@ -68,7 +81,11 @@ const newRound=document.querySelector('#newRound');
 const returnZone=document.querySelector('#returnZone');
 const progressBadge=document.querySelector('#progressBadge');
 const nextLevel=document.querySelector('#nextLevel');
-let placed=[], round=0, countedThisRound=false;
+const resultModal=document.querySelector('#resultModal');
+const resultText=document.querySelector('#resultText');
+const modalNextQuestion=document.querySelector('#modalNextQuestion');
+const modalNextLevel=document.querySelector('#modalNextLevel');
+let placed=[], round=0, countedThisRound=false, lastRoundIndex=-1;
 
 function progressCount(){ return GameCore.loadProgress()[GAME+'Wins']; }
 function updateProgressBadge(){ progressBadge.textContent=`本關進度 ${progressCount()} / 3`; }
@@ -84,6 +101,24 @@ function updateNextButton(){
 }
 function total(){ return placed.reduce((s,id)=>s+objects.find(o=>o.id===id).weight,0); }
 function isPlaced(id){ return placed.includes(id); }
+function pickRandomRound(){
+  if(rounds.length<=1){ round=0; return; }
+  let next;
+  do{
+    next=Math.floor(Math.random()*rounds.length);
+  }while(next===lastRoundIndex);
+  lastRoundIndex=next;
+  round=next;
+}
+function showResultModal(wins){
+  resultText.textContent=`本關已成功 ${wins} / 3 次`;
+  modalNextLevel.hidden = wins < 3;
+  resultModal.hidden=false;
+}
+function hideResultModal(){
+  resultModal.hidden=true;
+}
+
 function gramsFor(obj){ return obj.grams; }
 function speedFor(obj){ return GameCore.dragSpeedFromGrams(gramsFor(obj))*FORKLIFT_POWER; }
 function liftFor(obj){ return GameCore.liftTimeFromGrams(gramsFor(obj)); }
@@ -244,6 +279,7 @@ function renderTarget(){
       if(wins>=3){
         message.textContent += GAME==='grams'?' 下一關「公斤」已解鎖！':GAME==='kilograms'?' 下一關「噸」已解鎖！':' 本關完成！';
       }
+      showResultModal(wins);
     }else{
       message.textContent=`答對了！剛好 ${rounds[round].label} 🎉`;
     }
@@ -257,12 +293,19 @@ function renderTarget(){
 }
 
 function startRound(next=false){
-  if(next)round=(round+1)%rounds.length;
+  if(next || lastRoundIndex===-1) pickRandomRound();
   placed=[];countedThisRound=false;
   mission.textContent=`拖入剛好 ${rounds[round].label} 的物品`;
   message.textContent='按住圖片舉起，再拖到秤盤稱重。';
   renderObjects();renderTarget();updateProgressBadge();updateNextButton();
 }
+modalNextQuestion.addEventListener('click',()=>{
+  hideResultModal();
+  startRound(true);
+});
+resultModal.addEventListener('click',e=>{
+  if(e.target===resultModal) hideResultModal();
+});
 nextLevel.addEventListener('click',e=>{
   if(nextLevel.classList.contains('disabled')){
     e.preventDefault();
