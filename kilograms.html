@@ -17,6 +17,7 @@
     <div class="actions">
       <a class="back" href="index.html">返回首頁</a>
       <button class="btn" id="newRound" type="button">換一題</button>
+      <a class="btn next-level disabled" id="nextLevel" href="tons.html" aria-disabled="true">下一關：噸</a>
     </div>
   </header>
 
@@ -70,10 +71,21 @@ const message=document.querySelector('#message');
 const newRound=document.querySelector('#newRound');
 const returnZone=document.querySelector('#returnZone');
 const progressBadge=document.querySelector('#progressBadge');
+const nextLevel=document.querySelector('#nextLevel');
 let placed=[], round=0, countedThisRound=false;
 
 function progressCount(){ return GameCore.loadProgress()[GAME+'Wins']; }
 function updateProgressBadge(){ progressBadge.textContent=`本關進度 ${progressCount()} / 3`; }
+function updateNextButton(){
+  const unlocked=GameCore.isUnlocked('tons');
+  if(unlocked){
+    nextLevel.classList.remove('disabled');
+    nextLevel.setAttribute('aria-disabled','false');
+  }else{
+    nextLevel.classList.add('disabled');
+    nextLevel.setAttribute('aria-disabled','true');
+  }
+}
 function total(){ return placed.reduce((s,id)=>s+objects.find(o=>o.id===id).weight,0); }
 function isPlaced(id){ return placed.includes(id); }
 function gramsFor(obj){ return obj.grams; }
@@ -231,6 +243,7 @@ function renderTarget(){
       countedThisRound=true;
       const wins=GameCore.addWin(GAME);
       updateProgressBadge();
+      updateNextButton();
       message.textContent=`答對了！本關已成功 ${wins} / 3 次 🎉`;
       if(wins>=3){
         message.textContent += GAME==='grams'?' 下一關「公斤」已解鎖！':GAME==='kilograms'?' 下一關「噸」已解鎖！':' 本關完成！';
@@ -252,8 +265,14 @@ function startRound(next=false){
   placed=[];countedThisRound=false;
   mission.textContent=`拖入剛好 ${rounds[round].label} 的物品`;
   message.textContent='按住圖片舉起，再拖到秤盤稱重。';
-  renderObjects();renderTarget();updateProgressBadge();
+  renderObjects();renderTarget();updateProgressBadge();updateNextButton();
 }
+nextLevel.addEventListener('click',e=>{
+  if(nextLevel.classList.contains('disabled')){
+    e.preventDefault();
+    message.textContent='本關需成功 3 次才能進入下一關。';
+  }
+});
 newRound.addEventListener('click',()=>startRound(true));
 startRound(false);
 </script>

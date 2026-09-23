@@ -115,3 +115,13 @@ h1{font-size:clamp(26px,4vw,40px);margin:3px 0 0}
   .forklift-area.forklift-enabled .plate-picture{cursor:none}
   .forklift-area.forklift-enabled.cursor-on .forklift-cursor{display:flex}
 }
+
+.next-level{
+  text-decoration:none;
+}
+.next-level.disabled{
+  background:#e5e7eb;
+  color:#9ca3af;
+  pointer-events:auto;
+  cursor:not-allowed;
+}
