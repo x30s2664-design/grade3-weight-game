@@ -85,14 +85,15 @@ function liftFor(obj){ return GameCore.liftTimeFromGrams(gramsFor(obj)); }
 function renderObjects(){
   itemsEl.innerHTML='';
   objects.forEach(obj=>{
+    // 來源物品永遠保留，可重複搬運同一種物品。
     const card=document.createElement('div');
-    card.className='object-card'+(isPlaced(obj.id)?' used':'');
+    card.className='object-card';
     card.innerHTML=`
-      <div class="drag-picture" role="button" tabindex="0" aria-disabled="${isPlaced(obj.id)}"
+      <div class="drag-picture" role="button" tabindex="0" aria-disabled="false"
         aria-label="${obj.name}，拖到秤盤">${obj.pic}</div>
       <div class="name">${obj.name}</div>
       <div class="progress-track"><div class="progress"></div></div>
-      <div class="status">${isPlaced(obj.id)?'已在秤盤':'按住圖片舉起'}</div>`;
+      <div class="status">按住圖片舉起</div>`;
     setupSourceDrag(card,obj);
     itemsEl.appendChild(card);
   });
@@ -110,7 +111,7 @@ function setupSourceDrag(card,obj){
   function reset(){
     active=false;lifted=false;clearTimeout(timer);cancelAnimationFrame(holdRaf);cancelAnimationFrame(dragRaf);
     pic.classList.remove('holding','lifted');pic.style.transform='';progress.style.width='0%';
-    status.textContent=isPlaced(obj.id)?'已在秤盤':'按住圖片舉起';
+    status.textContent='按住圖片舉起';
   }
   function loop(now){
     if(!active||!lifted)return;
@@ -124,7 +125,7 @@ function setupSourceDrag(card,obj){
   }
 
   pic.addEventListener('pointerdown',e=>{
-    e.preventDefault();if(active||isPlaced(obj.id))return;
+    e.preventDefault();if(active)return;
     active=true;startX=e.clientX;startY=e.clientY;startScrollY=window.scrollY;
     lastClientX=e.clientX;lastClientY=e.clientY;startTime=performance.now();lastFrame=0;
     state.targetX=state.targetY=state.currentX=state.currentY=0;
@@ -158,13 +159,13 @@ function setupSourceDrag(card,obj){
     const a=pic.getBoundingClientRect(),b=targetArea.getBoundingClientRect();
     const cx=a.left+a.width/2,cy=a.top+a.height/2;
     const hit=cx>=b.left&&cx<=b.right&&cy>=b.top&&cy<=b.bottom;
-    if(hit&&!isPlaced(obj.id)){placed.push(obj.id);renderObjects();renderTarget();}
+    if(hit){placed.push(obj.id);renderObjects();renderTarget();}
     else message.textContent=obj.name+'還沒移到秤盤。';
     reset();
   });
   pic.addEventListener('pointercancel',reset);
   pic.addEventListener('keydown',e=>{
-    if((e.key==='Enter'||e.key===' ')&&!isPlaced(obj.id)){
+    if(e.key==='Enter'||e.key===' '){
       e.preventDefault();placed.push(obj.id);renderObjects();renderTarget();
     }
   });

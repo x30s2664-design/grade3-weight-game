@@ -97,3 +97,21 @@ h1{font-size:clamp(26px,4vw,40px);margin:3px 0 0}
 }
 @media (max-width:620px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important}}
+
+
+.machine-switch-row{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px
+}
+.machine-switch{
+  min-height:42px;border:0;border-radius:12px;padding:0 14px;
+  background:var(--accent);color:#fff;font-weight:800;cursor:pointer
+}
+/* 預設不是鏟車模式；只有 forklift-enabled 時才隱藏一般滑鼠並顯示鏟車游標 */
+@media (hover:hover) and (pointer:fine){
+  .forklift-area{cursor:auto}
+  .forklift-area .drag-picture,.forklift-area .plate-picture{cursor:grab}
+  .forklift-area.forklift-enabled{cursor:none}
+  .forklift-area.forklift-enabled .drag-picture,
+  .forklift-area.forklift-enabled .plate-picture{cursor:none}
+  .forklift-area.forklift-enabled.cursor-on .forklift-cursor{display:flex}
+}

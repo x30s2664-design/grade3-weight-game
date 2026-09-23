@@ -24,9 +24,12 @@
     <div class="panel">
       <div class="mission-label">任務</div>
       <div class="mission" id="mission"></div>
-      <div class="hint">你正在操作鏟車。越重的物品，鏟車搬得越慢。</div>
+      <div class="hint" id="modeHint">目前是徒手模式。噸級物品會非常難拖動。</div>
       <div class="progress-badge" id="progressBadge">本關進度 0 / 3</div>
-      <div class="machine-badge">🚜 鏟車搬運模式</div>
+      <div class="machine-switch-row">
+        <button class="machine-switch" id="machineSwitch" type="button">切換鏟車</button>
+        <div class="machine-badge" id="machineBadge">✋ 徒手模式</div>
+      </div>
 
       <div class="scale-wrap">
         <div class="weigh-platform" id="targetArea" aria-label="大型地磅">
@@ -56,7 +59,9 @@ if(!GameCore.isUnlocked('tons')){
   location.href='index.html';
 }
 
-const GAME='tons', UNIT='t', FORKLIFT_POWER=10;
+const GAME='tons', UNIT='t';
+let forkliftMode=false;
+const FORKLIFT_POWER=10;
 const objects=[{"id": "car", "pic": "🚗", "name": "小型車", "weight": 1, "grams": 1000000}, {"id": "pallet", "pic": "🧱", "name": "貨物棧板", "weight": 1.5, "grams": 1500000}, {"id": "truck", "pic": "🚚", "name": "貨車", "weight": 2, "grams": 2000000}, {"id": "machine", "pic": "🏗️", "name": "大型機械", "weight": 2.5, "grams": 2500000}, {"id": "bus", "pic": "🚌", "name": "巴士", "weight": 3, "grams": 3000000}, {"id": "container", "pic": "📦", "name": "貨櫃", "weight": 4, "grams": 4000000}];
 const rounds=[{"target": 2, "label": "2 噸"}, {"target": 3.5, "label": "3.5 噸"}, {"target": 5, "label": "5 噸"}, {"target": 7, "label": "7 噸"}];
 
@@ -77,22 +82,59 @@ function updateProgressBadge(){ progressBadge.textContent=`本關進度 ${progre
 function total(){ return placed.reduce((s,id)=>s+objects.find(o=>o.id===id).weight,0); }
 function isPlaced(id){ return placed.includes(id); }
 function gramsFor(obj){ return obj.grams; }
-function speedFor(obj){ return GameCore.dragSpeedFromGrams(gramsFor(obj))*FORKLIFT_POWER; }
+function speedFor(obj){ return GameCore.dragSpeedFromGrams(gramsFor(obj))*(forkliftMode?FORKLIFT_POWER:1); }
 function liftFor(obj){ return GameCore.liftTimeFromGrams(gramsFor(obj)); }
 
-const cursor=document.querySelector('#forkliftCursor'); root.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')root.classList.add('cursor-on')}); root.addEventListener('pointerleave',()=>root.classList.remove('cursor-on')); root.addEventListener('pointermove',e=>{if(e.pointerType==='mouse'){cursor.style.left=e.clientX+'px';cursor.style.top=e.clientY+'px';}});
+const cursor=document.querySelector('#forkliftCursor');
+const machineSwitch=document.querySelector('#machineSwitch');
+const machineBadge=document.querySelector('#machineBadge');
+const modeHint=document.querySelector('#modeHint');
+
+function updateMachineModeUI(){
+  if(forkliftMode){
+    root.classList.add('forklift-enabled');
+    machineSwitch.textContent='切回徒手';
+    machineBadge.textContent='🚜 鏟車模式';
+    modeHint.textContent='鏟車模式已開啟。越重的物品仍然搬得越慢。';
+    message.textContent='鏟車已啟用，現在拖曳大型物品會比較快。';
+  }else{
+    root.classList.remove('forklift-enabled','cursor-on');
+    machineSwitch.textContent='切換鏟車';
+    machineBadge.textContent='✋ 徒手模式';
+    modeHint.textContent='目前是徒手模式。噸級物品會非常難拖動。';
+    message.textContent='目前是徒手模式。可以先試著拖，再切換鏟車。';
+  }
+  renderObjects();
+  renderTarget();
+}
+
+machineSwitch.addEventListener('click',()=>{
+  forkliftMode=!forkliftMode;
+  updateMachineModeUI();
+});
+
+root.addEventListener('pointerenter',e=>{
+  if(e.pointerType==='mouse' && forkliftMode) root.classList.add('cursor-on');
+});
+root.addEventListener('pointerleave',()=>root.classList.remove('cursor-on'));
+root.addEventListener('pointermove',e=>{
+  if(e.pointerType!=='mouse' || !forkliftMode) return;
+  cursor.style.left=e.clientX+'px';
+  cursor.style.top=e.clientY+'px';
+});
 
 function renderObjects(){
   itemsEl.innerHTML='';
   objects.forEach(obj=>{
+    // 來源物品永遠保留，可重複搬運同一種物品。
     const card=document.createElement('div');
-    card.className='object-card'+(isPlaced(obj.id)?' used':'');
+    card.className='object-card';
     card.innerHTML=`
-      <div class="drag-picture" role="button" tabindex="0" aria-disabled="${isPlaced(obj.id)}"
+      <div class="drag-picture" role="button" tabindex="0" aria-disabled="false"
         aria-label="${obj.name}，拖到大型地磅">${obj.pic}</div>
       <div class="name">${obj.name}</div>
       <div class="progress-track"><div class="progress"></div></div>
-      <div class="status">${isPlaced(obj.id)?'已在大型地磅':'按住圖片舉起'}</div>`;
+      <div class="status">按住圖片舉起</div>`;
     setupSourceDrag(card,obj);
     itemsEl.appendChild(card);
   });
@@ -110,7 +152,7 @@ function setupSourceDrag(card,obj){
   function reset(){
     active=false;lifted=false;clearTimeout(timer);cancelAnimationFrame(holdRaf);cancelAnimationFrame(dragRaf);
     pic.classList.remove('holding','lifted');pic.style.transform='';progress.style.width='0%';
-    status.textContent=isPlaced(obj.id)?'已在大型地磅':'按住圖片舉起';
+    status.textContent='按住圖片舉起';
   }
   function loop(now){
     if(!active||!lifted)return;
@@ -124,12 +166,12 @@ function setupSourceDrag(card,obj){
   }
 
   pic.addEventListener('pointerdown',e=>{
-    e.preventDefault();if(active||isPlaced(obj.id))return;
+    e.preventDefault();if(active)return;
     active=true;startX=e.clientX;startY=e.clientY;startScrollY=window.scrollY;
     lastClientX=e.clientX;lastClientY=e.clientY;startTime=performance.now();lastFrame=0;
     state.targetX=state.targetY=state.currentX=state.currentY=0;
     pic.setPointerCapture(e.pointerId);pic.classList.add('holding');
-    message.textContent='正在舉起'+obj.name+'……';
+    message.textContent=(forkliftMode?'鏟車正在鏟起':'正在徒手拖動')+obj.name+'……';
     const tick=now=>{
       if(!active||lifted)return;
       const p=Math.min(1,(now-startTime)/needed);
@@ -140,7 +182,7 @@ function setupSourceDrag(card,obj){
     timer=setTimeout(()=>{
       if(!active)return;
       lifted=true;pic.classList.remove('holding');pic.classList.add('lifted');
-      progress.style.width='100%';status.textContent='拖到大型地磅';
+      progress.style.width='100%';status.textContent=forkliftMode?'鏟車搬到大型地磅':'慢慢拖到大型地磅';
       dragRaf=requestAnimationFrame(loop);
     },needed);
   });
@@ -158,13 +200,13 @@ function setupSourceDrag(card,obj){
     const a=pic.getBoundingClientRect(),b=targetArea.getBoundingClientRect();
     const cx=a.left+a.width/2,cy=a.top+a.height/2;
     const hit=cx>=b.left&&cx<=b.right&&cy>=b.top&&cy<=b.bottom;
-    if(hit&&!isPlaced(obj.id)){placed.push(obj.id);renderObjects();renderTarget();}
+    if(hit){placed.push(obj.id);renderObjects();renderTarget();}
     else message.textContent=obj.name+'還沒移到大型地磅。';
     reset();
   });
   pic.addEventListener('pointercancel',reset);
   pic.addEventListener('keydown',e=>{
-    if((e.key==='Enter'||e.key===' ')&&!isPlaced(obj.id)){
+    if(e.key==='Enter'||e.key===' '){
       e.preventDefault();placed.push(obj.id);renderObjects();renderTarget();
     }
   });
@@ -250,11 +292,12 @@ function startRound(next=false){
   if(next)round=(round+1)%rounds.length;
   placed=[];countedThisRound=false;
   mission.textContent=`搬入剛好 ${rounds[round].label} 的物品`;
-  message.textContent='用鏟車拖住物品，再搬到大型地磅。';
+  message.textContent=forkliftMode?'鏟車模式：把物品搬到大型地磅。':'徒手模式：先試著拖動噸級物品。';
   renderObjects();renderTarget();updateProgressBadge();
 }
 newRound.addEventListener('click',()=>startRound(true));
 startRound(false);
+updateMachineModeUI();
 </script>
 
 </body>
